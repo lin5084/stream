@@ -1,0 +1,25 @@
+name: Build STREAM Android ARM32
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ndk;21e
+      - name: Compile armeabi-v7a
+        run: |
+          export NDK=$ANDROID_HOME/ndk/21e
+          export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
+          export CC=$TOOLCHAIN/bin/armv7a-linux-androideabi21-clang
+          $CC -O3 -fopenmp stream.c -o stream-armeabi
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-arm32
+          path: stream-armeabi
