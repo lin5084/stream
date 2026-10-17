@@ -1,11 +1,18 @@
-/* STREAM benchmark */
+/* STREAM benchmark serial (no OpenMP) */
 #include <stdio.h>
 #include <stdlib.h>
-#include <omp.h>
+#include <time.h>
 
 #define N 16000000
 
 static double *a, *b, *c;
+
+double second(void)
+{
+    struct timespec tp;
+    clock_gettime(CLOCK_MONOTONIC, &tp);
+    return (double)tp.tv_sec + (double)tp.tv_nsec * 1.0e-9;
+}
 
 int main(void)
 {
@@ -19,42 +26,34 @@ int main(void)
     b = (double*)malloc(N * sizeof(double));
     c = (double*)malloc(N * sizeof(double));
 
-    #pragma omp parallel
-    {
-        #pragma omp for
-        for(i = 0; i < N; i++){
-            a[i] = 1.0;
-            b[i] = 2.0;
-            c[i] = 0.0;
-        }
+    for(i = 0; i < N; i++){
+        a[i] = 1.0;
+        b[i] = 2.0;
+        c[i] = 0.0;
     }
 
     // Copy: c = a
-    t0 = omp_get_wtime();
-    #pragma omp parallel for
+    t0 = second();
     for(i = 0; i < N; i++) c[i] = a[i];
-    t1 = omp_get_wtime();
+    t1 = second();
     times[0] = t1 - t0;
 
     // Scale: b = scalar*c
-    t0 = omp_get_wtime();
-    #pragma omp parallel for
+    t0 = second();
     for(i = 0; i < N; i++) b[i] = scalar * c[i];
-    t1 = omp_get_wtime();
+    t1 = second();
     times[1] = t1 - t0;
 
     // Add: c = a + b
-    t0 = omp_get_wtime();
-    #pragma omp parallel for
+    t0 = second();
     for(i = 0; i < N; i++) c[i] = a[i] + b[i];
-    t1 = omp_get_wtime();
+    t1 = second();
     times[2] = t1 - t0;
 
     // Triad: a = b + scalar*c
-    t0 = omp_get_wtime();
-    #pragma omp parallel for
+    t0 = second();
     for(i = 0; i < N; i++) a[i] = b[i] + scalar * c[i];
-    t1 = omp_get_wtime();
+    t1 = second();
     times[3] = t1 - t0;
 
     double bytes[4] = {
@@ -64,8 +63,8 @@ int main(void)
         3.0 * N * sizeof(double),
     };
 
-    printf("STREAM version C\n");
-    printf("Array size = %d, Offset = 0\n", N);
+    printf("STREAM serial version (No OpenMP)\n");
+    printf("Array size = %d\n", N);
     printf("\n%7s %15s %15s\n", "Kernel", "MB/s", "Time(s)");
     for(i=0;i<4;i++){
         double bw = bytes[i] / (1024.0*1024.0) / times[i];
